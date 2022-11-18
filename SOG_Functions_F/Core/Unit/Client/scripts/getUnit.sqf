@@ -1,5 +1,5 @@
 /*
-*   From Database to Arma 3 Unit
+	From Database to Arma 3 Unit
 */
 
 _Player = _this select 0;
