@@ -1,0 +1,1 @@
+[] remoteExecCall ["SOG_fnc_Server_getVehicle"];

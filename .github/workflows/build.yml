@@ -1,0 +1,76 @@
+name: Build
+on:
+  push:
+    branches: [ "master" ]
+    paths-ignore:
+      - ".github/**"
+      - "SOG_Functions_F/Core/Main/script_version.hpp"
+      - "tools/**"
+      - ".gitignore"
+
+jobs:
+  build-mod:
+    runs-on: ubuntu-latest 
+    outputs:
+      output1: ${{ steps.bump-version.outputs.VERSION }}
+    steps:
+      - name: Checkout the source code
+        uses: actions/checkout@master
+        with:
+          ref: master
+          
+      - name: Bump version
+        id: bump-version
+        run: python3 tools/version_bumper.py increment_build push_commit
+        
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: SOGServer_v${{ steps.bump-version.outputs.VERSION }}
+          path: |
+            Data/
+            SOG_Functions_F/
+            config.cpp
+            initServer_sog.sqf
+            mod.cpp
+            README.md
+            
+  release-mod:
+    runs-on: ubuntu-latest
+    needs: build-mod
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: SOGServer_v${{ needs.build-mod.outputs.output1 }}
+
+      - name: Archive Mod Content
+        uses: thedoctor0/zip-release@master
+        with:
+          filename: SOGServer_v${{ needs.build-mod.outputs.output1 }}.zip
+          path: |
+            Data/
+            SOG_Functions_F/
+            config.cpp
+            initServer_sog.sqf
+            mod.cpp
+            README.md
+
+      - name: Create GitHub Release
+        id: create-new-release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.build-mod.outputs.output1 }}
+          release_name: SOGServer_v${{ needs.build-mod.outputs.output1 }}
+          
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create-new-release.outputs.upload_url }}
+          asset_path: ./SOGServer_v${{ needs.build-mod.outputs.output1 }}.zip
+          asset_name: SOGServer_v${{ needs.build-mod.outputs.output1 }}.zip
+          asset_content_type: application/zip
